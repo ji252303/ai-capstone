@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dream in Guitar</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header>
+        <div class="logo">Dream in Guitar</div>
+        <nav>
+            <ul>
+                <li><a href="{{ url_for('index') }}">Home</a></li>
+                <li><a href="{{ url_for('about') }}">About</a></li>
+                {% if username %}
+                <li><a href="javascript:void(0);" onclick="confirmLogout()">Logout</a></li>
+                {% else %}
+                    <li><a href="{{ url_for('login') }}">Login</a></li>
+                {% endif %}
+            </ul>
+            <a id="pull" href="#"></a>
+        </nav>
+    </header>
+    <div class="container">
+        <div class="left-side">
+            <h1>Dream in Guitar</h1>
+        </div>
+        <div class="divider"></div>
+        <div class="right-side">
+            <h1>집에서 편하게 즐기는 기타 강습</h1>
+        </div>
+    </div>
+    
+    <script>
+        function confirmLogout() {
+            if (confirm("로그아웃하시겠습니까?")) {
+                window.location.href = "{{ url_for('logout') }}";
+            }
+        }
+    </script>
+</body>
+</html>

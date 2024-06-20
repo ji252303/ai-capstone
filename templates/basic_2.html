@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Basic Playing - Dream in Guitar</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/start.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .button-container {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body data-logged-in="{{ 'true' if session.get('username') else 'false' }}">
+    <header>
+        <div class="logo">Dream in Guitar</div>
+        <nav>
+            <ul>
+                <li><a href="{{ url_for('index') }}">Home</a></li>
+                <li><a href="{{ url_for('about') }}">About</a></li>
+                {% if username %}
+                <li><a href="javascript:void(0);" onclick="confirmLogout()">Logout</a></li>
+                {% else %}
+                <li><a href="{{ url_for('login') }}">Login</a></li>
+                {% endif %}
+            </ul>
+            <a id="pull" href="#"></a>
+        </nav>
+    </header>
+    <a class="records-link" href="{{ url_for('records') }}">기록 보기</a>
+    <div class="container">
+        <h1>노래 목록</h1>
+        <div class="song-list">
+            <div class="song-item"><a onclick="startBasic()">델리스파이스 - 고백</a></div>
+            <div class="song-item"><a>노래 2</a></div>
+            <div class="song-item"><a>노래 3</a></div>
+            <div class="song-item"><a>노래 4</a></div>
+            <div class="song-item"><a>노래 5</a></div>
+        </div>
+        <div class="button-container">
+            <button class="custom-btn btn-3" onclick="goBack()">뒤로 가기</button>
+        </div>
+    </div>
+    <script>
+        function startBasic() {
+            var loggedIn = document.body.getAttribute('data-logged-in') === 'true';
+            if (loggedIn) {
+                const result = confirm("기본 연주를 시작하시겠습니까?")
+                if (result) { window.location.href = "{{ url_for('basic_3') }}"; }
+            } else {
+                alert("로그인이 필요합니다.");
+                window.location.href = "{{ url_for('login') }}";
+            }
+        }
+
+        function goBack() {
+            window.history.back();
+        }
+
+        function goHome() {
+            const result = confirm('메인 화면으로 돌아가시겠습니까?')
+            if(result) {window.location.href = "{{ url_for('index') }}"}
+            else {}
+        }
+
+        function confirmLogout() {
+            if (confirm("로그아웃하시겠습니까?")) {
+                window.location.href = "{{ url_for('logout') }}";
+            }
+        }
+    </script>
+</body>
+</html>

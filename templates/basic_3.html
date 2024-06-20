@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands"></script>
+    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Basic Playing Mode</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/basic.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header>
+        <div class="logo">Dream in Guitar</div>
+        <nav>
+            <ul>
+                <li><a href="{{ url_for('index') }}">Home</a></li>
+                <li><a href="{{ url_for('about') }}">About</a></li>
+                {% if username %}
+                <li><a href="javascript:void(0);" onclick="confirmLogout()">Logout</a></li>
+                {% else %}
+                    <li><a href="{{ url_for('login') }}">Login</a></li>
+                {% endif %}
+            </ul>
+            <a id="pull" href="#"></a>
+        </nav>
+    </header>
+    <div class="container">
+        <div class="content">
+            <div class="border-box">
+                <div id="placeholder">이곳에 웹캠이 표시됩니다.</div>
+                <video id="webcam" autoplay playsinline width="1000" height="720" style="display:none;"></video>
+                <img id="output" width="1000" height="720"/>
+            </div>
+            <div class="guide-wrapper">
+                <div class="guide-container">
+                    <div id="guide-text">Code Guide</div>
+                    <div class="guide-row">
+                        <div class="guide-column">
+                            <div id="guide-current-text">현재 코드</div>
+                            <img id="guide-image" class="guide-image" src="{{ url_for('static', filename='image/g_code.png') }}" alt="Code Guide"/>
+                        </div>
+                        <div class="guide-column">
+                            <div id="guide-next-text">다음 코드</div>
+                            <img id="guide-next-image" class="guide-image" src="{{ url_for('static', filename='image/a_code.png') }}" alt="Next Code"/>
+                        </div>
+                    </div>
+                </div>
+                <div class="guide-container">
+                    <div id="guide-text">Stroke Guide</div>
+                    <div class="guide-center">
+                        <img id="stroke-guide-image" class="stroke-image" src="{{ url_for('static', filename='image/1.png') }}" alt="Stroke Guide"/>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="guide">
+            기본 연주 모드를 시작하려면 'Start' 버튼을 눌러주세요.
+        </div>
+        <div class="controls">
+            <button class="btn btn-3" onclick="startPlaying()">Start</button>
+            <button class="btn btn-3" onclick="stopPlaying()">Stop</button>
+        </div>
+    </div>
+
+    <div id="result-popup" class="popup">
+        <div class="popup-content">
+            <span class="close-button" onclick="closePopup()">&times;</span>
+            <p id="result-text"></p>
+        </div>
+    </div>
+
+    <script>
+        const videoElement = document.getElementById('webcam');
+        const outputElement = document.getElementById('output');
+        const guideElement = document.getElementById('guide');
+        const guideImage = document.getElementById('guide-image');
+        const guideNextImage = document.getElementById('guide-next-image');
+        const strokeGuideImage = document.getElementById('stroke-guide-image');
+        const placeholder = document.getElementById('placeholder');
+        const resultPopup = document.getElementById('result-popup');
+        const resultText = document.getElementById('result-text');
+        let stream;
+        let audio = new Audio("{{ url_for('static', filename='music/델리스파이스 - 고백.mp3') }}");
+        const socket = io();
+        let intervalId;
+        let correctChord = 'G';
+        let mistakes = 0;
+        let correctChordMet = false;
+        let correctChordMessage = '';
+        let tutorialCompleted = false;
+
+        const chordInstructions = {
+            'C': '1프렛의 B줄을 1번 손가락으로, 2프렛의 D줄을 2번 손가락으로, 3프렛의 A줄을 3번 손가락으로 눌러서 잡습니다.',
+            'D': '2프렛의 E줄을 2번 손가락으로, 3프렛의 B줄을 3번 손가락으로, 2프렛의 G줄을 1번 손가락으로 눌러서 잡습니다.',
+            'A': '2프렛의 D, G, B줄을 각각 2, 3, 4번 손가락으로 눌러서 잡습니다.',
+            'G': '3프렛의 E줄과 B줄을 각각 4번 손가락과 3번 손가락으로, 2프렛의 A줄을 2번 손가락으로 눌러서 잡습니다.',
+            'E': '2프렛의 A줄과 D줄을 각각 2번 손가락과 3번 손가락으로 눌러서 잡습니다.'
+        };
+
+        const strokeImages = ['1.png', '2.png', '3.png', '4.png'];
+
+        async function startWebcam() {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 360 } });
+                videoElement.srcObject = stream;
+                videoElement.style.display = 'block';
+                videoElement.play();
+                outputElement.style.visibility = 'visible';
+                placeholder.style.display = 'none';
+            } catch (error) {
+                console.error('웹캠 연결 에러: ', error);
+            }
+        }
+
+        async function startPlaying() {
+            startWebcam();
+            guideImage.style.visibility = 'visible';
+            guideNextImage.style.visibility = 'visible';
+            strokeGuideImage.style.visibility = 'visible';
+            guideElement.innerText = chordInstructions['G'];
+            audio.play().catch(error => {
+                console.error('오디오 재생 에러:', error);
+            });
+            changeChords();
+            sendFrames();
+        }
+
+        function changeChords() {
+            setTimeout(() => {
+                updateChord('G', 'A');
+            }, 0);  // 시작
+
+            setTimeout(() => {
+                updateChord('A', 'C');
+            }, 3000); // 3초 후 A코드로 변경
+
+            setTimeout(() => {
+                updateChord('C', 'G');
+            }, 6000); // 6초 후 C코드로 변경
+
+            setTimeout(() => {
+                updateChord('G', 'G');
+            }, 9000); // 9초 후 G코드로 변경
+
+            setTimeout(() => {
+                updateChord('G', 'A');
+            }, 12000); // 12초 후 G코드로 변경
+
+            setTimeout(() => {
+                updateChord('A', 'C');
+            }, 15000); // 15초 후 A코드로 변경
+
+            setTimeout(() => {
+                updateChord('C', 'G');
+            }, 18000); // 18초 후 C코드로 변경
+
+            setTimeout(() => {
+                updateChord('G', 'D');
+            }, 21000); // 21초 후 G코드로 변경
+
+            setTimeout(() => {
+                updateChord('D', 'E');
+            }, 23000); // 23초 후 D코드로 변경
+
+            setTimeout(() => {
+                updateChord('E', 'A');
+            }, 24000); // 24초 후 Em코드로 변경
+
+            setTimeout(() => {
+                updateChord('A', 'C');
+            }, 27000); // 27초 후 A코드로 변경
+
+            setTimeout(() => {
+                updateChord('C', 'G');
+            }, 30000); // 30초 후 C코드로 변경
+
+            setTimeout(() => {
+                updateChord('G', 'D');
+            }, 33000); // 33초 후 G코드로 변경
+
+            setTimeout(() => {
+                updateChord('D', 'E');
+            }, 35000); // 35초 후 D코드로 변경
+
+            setTimeout(() => {
+                updateChord('E', 'A');
+            }, 36000); // 36초 후 Em코드로 변경
+
+            setTimeout(() => {
+                updateChord('A', 'C');
+            }, 39000); // 39초 후 A코드로 변경
+
+            setTimeout(() => {
+                updateChord('C', 'C');
+            }, 42000); // 42초 후 C코드로 변경
+
+            setTimeout(() => {
+                updateChord('C', 'G');
+            }, 43500); // 43.5초 후 C코드로 변경
+
+            setTimeout(() => {
+                updateChord('G', 'G');
+            }, 45000); // 45초 후 G코드로 변경
+
+            setTimeout(() => {
+                updateChord('G', 'A');
+            }, 48000); // 48초 후 G코드로 변경
+
+            setTimeout(() => {
+                updateChord('A', 'C');
+            }, 51000); // 51초 후 A코드로 변경
+
+            setTimeout(() => {
+                updateChord('C', 'G');
+            }, 54000); // 54초 후 C코드로 변경
+
+            setTimeout(() => {
+                updateChord('G', 'G');
+            }, 57000); // 57초 후 G코드로 변경
+
+            setTimeout(() => {
+                updateChord('G', 'A');
+            }, 60000); // 60초 후 G코드로 변경
+
+            setTimeout(() => {
+                updateChord('A', 'C');
+            }, 63000); // 63초 후 A코드로 변경
+
+            setTimeout(() => {
+                updateChord('C', 'G');
+            }, 66000); // 66초 후 C코드로 변경
+
+            setTimeout(() => {
+                updateChord('G', '');
+                guideNextImage.style.visibility = 'hidden';
+                guideElement.innerText = chordInstructions['G'];
+            }, 69000); // 69초 후 G코드로 변경
+
+            setTimeout(() => {
+                guideImage.style.visibility = 'hidden';
+                guideNextImage.style.visibility = 'hidden';
+                guideElement.innerText = "연주가 종료되었습니다. 결과를 확인하세요!";
+                showResultPopup();
+            }, 72000); // 72초 후 종료
+        }
+
+        function updateChord(current, next) {
+            guideImage.src = getImageUrl(current);
+            guideNextImage.src = getImageUrl(next);
+            strokeGuideImage.src = getStrokeImageUrl();
+            guideElement.innerText = chordInstructions[current];
+            correctChordMessage = `${current}코드를 올바르게 잡았습니다!`;
+            correctChord = current;
+            setTimeout(() => {
+                if (!correctChordMet) {
+                    mistakes += 1;
+                    guideElement.innerText = chordInstructions[correctChord];
+                } else {
+                    guideElement.innerText = correctChordMessage;
+                }
+                correctChordMet = false;
+            }, 3000);
+        }
+
+        function getImageUrl(chord) {
+            return `/static/image/${chord}_code.png`;
+        }
+
+        function getStrokeImageUrl() {
+            const randomIndex = Math.floor(Math.random() * strokeImages.length);
+            return `/static/image/${strokeImages[randomIndex]}`;
+        }
+
+        function sendFrames() {
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            canvas.width = videoElement.width;
+            canvas.height = videoElement.height;
+
+            intervalId = setInterval(() => {
+                context.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+                const data = canvas.toDataURL('image/jpeg').split(',')[1];
+                socket.emit('image', data);
+            }, 100); // 100ms 마다 이미지 전송
+        }
+
+        socket.on('response_back', data => {
+            outputElement.src = 'data:image/jpeg;base64,' + data.image;
+            if (data.hand_detected && data.hand_inside_box) {
+                switch (correctChord) {
+                    case 'G':
+                        if (data.is_g_code_correct) {
+                            correctChordMet = true;
+                        }
+                        break;
+                    case 'A':
+                        if (data.is_a_code_correct) {
+                            correctChordMet = true;
+                        }
+                        break;
+                    case 'C':
+                        if (data.is_c_code_correct) {
+                            correctChordMet = true;
+                        }
+                        break;
+                    case 'D':
+                        if (data.is_d_code_correct) {
+                            correctChordMet = true;
+                        }
+                        break;
+                    case 'E':
+                        if (data.is_e_code_correct) {
+                            correctChordMet = true;
+                        }
+                        break;
+                }
+                if (correctChordMet) {
+                    guideElement.innerText = correctChordMessage;
+                }
+            }
+        });
+
+        function stopPlaying() {
+            if (stream) {
+                let tracks = stream.getTracks();
+                tracks.forEach(track => track.stop());
+                videoElement.srcObject = null;
+                videoElement.style.display = 'none';
+                outputElement.style.visibility = 'hidden';
+                placeholder.style.display = 'flex';
+                guideImage.style.visibility = 'hidden';
+                guideNextImage.style.visibility = 'hidden';
+                strokeGuideImage.style.visibility = 'hidden';
+                guideElement.innerText = "다시 시작하시려면 'Start'버튼을 눌러주세요.";
+                tutorialCompleted = true;
+            }
+            audio.pause();
+            audio.currentTime = 0;
+            clearInterval(intervalId);
+            mistakes = 0;
+        }
+
+        function goHome() {
+            const result = confirm('메인 화면으로 돌아가시겠습니까?')
+            if(result) { window.location.href = "{{ url_for('index') }}" }
+        }
+
+        function confirmLogout() {
+            if (confirm("로그아웃하시겠습니까?")) {
+                window.location.href = "{{ url_for('logout') }}";
+            }
+        }
+
+        function showResultPopup() {
+            setTimeout(() => {
+                const username = "{{ session.get('username') }}";
+                const songTitle = "델리스파이스 - 고백";
+                if (username) {
+                    fetch('/save_record', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ username: username, song_title: songTitle, mistakes: mistakes })
+                    });
+                }
+
+                if (mistakes <= 10) {
+                    resultText.innerText = `틀린 횟수: ${mistakes}회\n 잘 하셨어요!`;
+                } else {
+                    resultText.innerText = `틀린 횟수: ${mistakes}회\n 더 노력해 보세요!`;
+                }
+                resultPopup.style.display = 'block';
+            }, 2000);
+        }
+
+        function closePopup() {
+            resultPopup.style.display = 'none';
+            if (tutorialCompleted) {
+                guideElement.innerText = "연주가 종료되었습니다. 결과를 확인하세요!";
+            }
+        }
+    </script>
+</body>
+</html>

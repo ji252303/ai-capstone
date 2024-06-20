@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Virtual Busking - Dream in Guitar</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/start.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body data-logged-in="{{ 'true' if session.get('username') else 'false' }}">
+    <header>
+        <div class="logo">Dream in Guitar</div>
+        <nav>
+            <ul>
+                <li><a href="{{ url_for('index') }}">Home</a></li>
+                <li><a href="{{ url_for('about') }}">About</a></li>
+                {% if username %}
+                <li><a href="javascript:void(0);" onclick="confirmLogout()">Logout</a></li>
+                {% else %}
+                    <li><a href="{{ url_for('login') }}">Login</a></li>
+                {% endif %}
+            </ul>
+            <a id="pull" href="#"></a>
+        </nav>
+    </header>
+    <div class="container">
+        <h1>Virtual Busking</h1>
+        <h3><p>원하는 악기와 가상 버스킹을 합니다.</p></h3>
+        <div class="button-container">
+            <button class="custom-btn btn-3" onclick="startBusking()">시작</button>
+            <button class="custom-btn btn-3" onclick="goBack()">뒤로 가기</button>
+        </div>
+    </div>
+    <script>
+        function startBusking() {
+            var loggedIn = document.body.getAttribute('data-logged-in') === 'true';
+            if (loggedIn) {
+                const result = confirm("가상 합주를 시작하시겠습니까?")
+                // if (result) { window.location.href = "{{ url_for('tutorial_2') }}"; }
+            } else {
+                alert("로그인이 필요합니다.");
+                window.location.href = "{{ url_for('login') }}";
+            }
+        }
+
+        function goBack() {
+            window.history.back();
+        }
+
+        function goHome() {
+            const result = confirm('메인 화면으로 돌아가시겠습니까?')
+            
+            if(result) {window.location.href = "{{ url_for('index') }}"}
+        }
+
+        function confirmLogout() {
+            if (confirm("로그아웃하시겠습니까?")) {
+                window.location.href = "{{ url_for('logout') }}";
+            }
+        }
+    </script>
+</body>
+</html>

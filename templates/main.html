@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dream in Guitar</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header>
+        <div class="logo">Dream in Guitar</div>
+        <nav>
+            <ul>
+                <li><a href="{{ url_for('index') }}">Home</a></li>
+                <li><a href="{{ url_for('about') }}">About</a></li>
+                {% if username %}
+                <li><a href="javascript:void(0);" onclick="confirmLogout()">Logout</a></li>
+                {% else %}
+                    <li><a href="{{ url_for('login') }}">Login</a></li>
+                {% endif %}
+            </ul>
+        </nav>
+    </header>
+    <div class="container">
+        <div class="left-side">
+            <h1>Dream in Guitar</h1>
+            {% if session['username'] %}
+                <p>Welcome, {{ session['username'] }}!</p>
+            {% endif %}
+        </div>
+        <div class="divider"></div>
+        <div class="right-side">
+            <div class="button-container">
+                <button class="custom-btn btn-3" onclick="goToTutorial()">튜토리얼</button>
+                <button class="custom-btn btn-3" onclick="goToBasic()">기본 연주</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        function goToTutorial() {
+            window.location.href = "{{ url_for('tutorial_1') }}";
+        }
+
+        function goToBasic() {
+            window.location.href = "{{ url_for('basic_1') }}";
+        }
+
+        function goToVirtualBusking() {
+            window.location.href = "{{ url_for('busking_1') }}";
+        }
+
+        function confirmLogout() {
+            if (confirm("로그아웃하시겠습니까?")) {
+                window.location.href = "{{ url_for('logout') }}";
+            }
+        }
+    </script>
+</body>
+</html>

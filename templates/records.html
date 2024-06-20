@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Records - Dream in Guitar</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/start.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .record-list {
+            width: 100%;
+            max-width: 600px;
+            background: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .record-item {
+            margin: 10px 0;
+            padding: 10px;
+            border-bottom: 1px solid #ccc;
+            transition: background 0.3s;
+        }
+
+        .record-item:last-child {
+            border-bottom: none;
+        }
+
+        .record-item div {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .record-item:hover {
+            background: #f0f0f0;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo">Dream in Guitar</div>
+        <nav>
+            <ul>
+                <li><a href="{{ url_for('index') }}">Home</a></li>
+                <li><a href="{{ url_for('about') }}">About</a></li>
+                {% if session.get('username') %}
+                <li><a href="javascript:void(0);" onclick="confirmLogout()">Logout</a></li>
+                {% else %}
+                <li><a href="{{ url_for('login') }}">Login</a></li>
+                {% endif %}
+            </ul>
+            <a id="pull" href="#"></a>
+        </nav>
+    </header>
+    <div class="container">
+        <h1>내 기록</h1>
+        <div class="record-list">
+            {% for record in records %}
+            <div class="record-item">
+                <div>
+                    <span>{{ record['song_title'] }}</span>
+                    <span>{{ record['mistakes'] }}회 틀림</span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        <div class="button-container">
+            <button class="custom-btn btn-3" onclick="goBack()">뒤로 가기</button>
+        </div>
+    </div>
+    <script>
+        function goBack() {
+            window.history.back();
+        }
+
+        function confirmLogout() {
+            if (confirm("로그아웃하시겠습니까?")) {
+                window.location.href = "{{ url_for('logout') }}";
+            }
+        }
+    </script>
+</body>
+</html>
