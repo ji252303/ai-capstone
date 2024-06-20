@@ -1,0 +1,10 @@
+tensorflow
+splite3
+openai
+opencv-python
+mediapipe
+numpy
+sounddevice
+joblib
+flask
+flask_socketio
